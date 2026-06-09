@@ -129,11 +129,12 @@ def run_pipeline(
         extract_clip(video_path, temp_clip, clip.start, clip.end)
         print(f"   ✓ Extracted")
 
-        # Burn captions
+        # Burn captions (temp_clip is already trimmed — starts at 0)
         burn_captions(
             temp_clip, clip_output,
             transcript, clip.start, clip.end,
             style=caption_style,
+            pre_trimmed=True,
         )
         print(f"   ✓ Captions burned ({caption_style} style)")
 

@@ -221,6 +221,7 @@ def burn_captions(
     style: str | CaptionStyle = "default",
     video_width: int = 1080,
     video_height: int = 1920,
+    pre_trimmed: bool = False,
 ) -> str:
     """Burn word-level captions onto a video clip.
 
@@ -228,11 +229,15 @@ def burn_captions(
         input_video: Source video file.
         output_video: Output file path.
         transcript: Full transcript with word timestamps.
-        clip_start: Start of the clip in seconds.
-        clip_end: End of the clip in seconds.
+        clip_start: Start of the clip in seconds (in the ORIGINAL video's timeline —
+            used to look up transcript words and offset caption timing).
+        clip_end: End of the clip in seconds (original timeline).
         style: Caption style name or CaptionStyle object.
         video_width: Output video width.
         video_height: Output video height.
+        pre_trimmed: Set True if input_video is ALREADY trimmed to [clip_start, clip_end]
+            (i.e. it starts at 0). Skips ffmpeg seeking — without this, seeking
+            clip_start seconds into a short pre-trimmed clip produces an empty MP4.
 
     Returns:
         Path to the output video.
@@ -242,6 +247,10 @@ def burn_captions(
     if isinstance(style, str):
         style = STYLES.get(style, STYLES["default"])
 
+    # Seek args: only seek into the input if it's the full-length source video.
+    seek_args = [] if pre_trimmed else ["-ss", str(clip_start)]
+    duration_args = [] if pre_trimmed else ["-t", str(clip_end - clip_start)]
+
     # Get words for this clip's time range
     words = _words_for_timerange(transcript.segments, clip_start, clip_end)
 
@@ -249,9 +258,9 @@ def burn_captions(
         # No captions to burn — just copy the clip
         subprocess.run([
             "ffmpeg", "-y",
-            "-ss", str(clip_start),
+            *seek_args,
             "-i", str(input_video),
-            "-t", str(clip_end - clip_start),
+            *duration_args,
             "-c:v", "libx264", "-preset", "fast",
             "-c:a", "aac",
             "-vf", f"scale={video_width}:{video_height}:force_original_aspect_ratio=decrease,pad={video_width}:{video_height}:(ow-iw)/2:(oh-ih)/2",
@@ -268,12 +277,11 @@ def burn_captions(
 
     try:
         # FFmpeg: extract clip + burn subtitles + scale
-        duration = clip_end - clip_start
         cmd = [
             "ffmpeg", "-y",
-            "-ss", str(clip_start),
+            *seek_args,
             "-i", str(input_video),
-            "-t", str(duration),
+            *duration_args,
             "-vf",
             f"scale={video_width}:{video_height}:force_original_aspect_ratio=decrease,"
             f"pad={video_width}:{video_height}:(ow-iw)/2:(oh-ih)/2,"
