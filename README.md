@@ -8,7 +8,7 @@ Give ClipCraft a long video (podcast, talk, stream) and get back short-form clip
 
 ```bash
 # Install
-pip install clipcraft
+pip install git+https://github.com/danbirker-svg/clipcraft.git
 
 # One command: long video → short clips
 clipcraft full podcast.mp4
@@ -63,7 +63,7 @@ clips/
 
 ```bash
 # From PyPI
-pip install clipcraft
+pip install git+https://github.com/danbirker-svg/clipcraft.git
 
 # From source
 git clone https://github.com/danbirker-svg/clipcraft.git
